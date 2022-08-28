@@ -314,7 +314,6 @@ def run(show_plots, planetCase):
     #
 
     dataLog = scObject.scStateOutMsg.recorder()
-    dataNewAtmoLog = tabAtmo.envOutMsgs[0].recorder()
     imuLog         = scImu.sensorOutMsg.recorder()
     imuLog1        = scImu1.sensorOutMsg.recorder()
     imuLog2        = scImu2.sensorOutMsg.recorder()
@@ -322,7 +321,6 @@ def run(show_plots, planetCase):
 
 
     scSim.AddModelToTask(simTaskDynamics, dataLog)
-    scSim.AddModelToTask(simTaskDynamics, dataNewAtmoLog)
     scSim.AddModelToTask(simTaskSensImu, imuLog)
     scSim.AddModelToTask(simTaskSensImu, imuLog1)
     scSim.AddModelToTask(simTaskSensImu, imuLog2)
@@ -354,31 +352,26 @@ def run(show_plots, planetCase):
     #
     posData = dataLog.r_BN_N
     velData = dataLog.v_BN_N
-    densData = dataNewAtmoLog.neutralDensity
     
-    # Retrieve Sensor data
-    # imuAccData = imuLog.AccelPlatform
-    # imuGyrData = imuLog.AngVelPlatform
-
     imuData    = np.concatenate((imuLog.AccelPlatform, imuLog.AngVelPlatform), axis=1)
     imuData1   = np.concatenate((imuLog1.AccelPlatform, imuLog1.AngVelPlatform), axis=1)
     imuData2   = np.concatenate((imuLog2.AccelPlatform, imuLog2.AngVelPlatform), axis=1)
 
     # Log Sensor data to csv
     fmtSpec  = '%4.6f'
-    np.savetxt('imuSens.txt',  imuData,  delimiter=',', header='Acc Data [3], Gyro Data[3]', fmt=fmtSpec)
-    np.savetxt('imuSens1.txt', imuData1, delimiter=',', header='Acc Data [3], Gyro Data[3]', fmt=fmtSpec)
-    np.savetxt('imuSens2.txt', imuData2, delimiter=',', header='Acc Data [3], Gyro Data[3]', fmt=fmtSpec)
+    np.save("imuSens.npy", imuData)
+    np.save("imuSens1.npy", imuData1)
+    np.save("imuSens2", imuData2)
 
     # GNSS
     gnssData   = np.concatenate((posData, velData), axis=1)
-    np.savetxt('GNSS.txt', gnssData, delimiter=',', header='pos Data[3], vel Data[3]', fmt=fmtSpec)
+    np.save("gnssSens.npy", gnssData)
 
     # STR Values to csv
     strTime    = strLog.timeTag * macros.NANO2SEC
     strAtt     = strLog.qInrtl2Case
     strData    = np.column_stack((strTime, strAtt))
-    np.savetxt('STR.txt', strData, delimiter=',', header='timeTag[s], quat[4]', fmt=fmtSpec)
+    np.save("strSens.npy", strData)
 
     np.set_printoptions(precision=16)
 
