@@ -36,6 +36,12 @@ npy_array_t* npyLoadData(interfaceCfg_t* cfg)
     return npy_array_load(cfg->filePath);
 }
 
+void setInterface(interfaceCfg_t* cfg, enum interfaceType type, char* filename)
+{
+    cfg->direction = type;
+    cfg->filePath  = filename;
+    initInterface(cfg);
+}
 
 int initIPC(ipcConfig_t* cfg)
 {
@@ -68,14 +74,10 @@ int initIPC(ipcConfig_t* cfg)
             perror("Bind Failed.");
             return -1;
         }
-        // if (connect(sock, (struct sockaddr *) &cfg->si, sizeof(cfg->si)) == -1)
-        // {
-        //     perror("Connect Failed.");
-        //     return -1;
-        // }
     }
-
+    /* Set the socket in the structure itself. */
     cfg->ipcSock = sock;
+    /* Code is redundant. */
     return sock;
 }
 
@@ -93,4 +95,20 @@ ssize_t recvMsgIPC(ipcConfig_t* cfg, uint8_t* dataBuf, size_t dataBufSize)
     addrSize = sizeof(cfg->si);
     retVal = recvfrom(cfg->ipcSock, dataBuf, dataBufSize, 0, (struct sockaddr *) &cfg->si, &addrSize);
     return retVal;
+}
+
+void initPollFd(struct pollfd* fds, unsigned int numFd, int event)
+{
+    for (size_t i = 0; i < numFd; i++)
+    {
+        fds[i].events = event;
+    }
+}
+
+void setIpcAddrPort(ipcConfig_t* cfg, char* addr, uint16_t port, enum interfaceType type)
+{
+    cfg->ipAddress = addr;
+    cfg->port      = port;
+    cfg->direction = type;
+    initIPC(cfg);
 }
