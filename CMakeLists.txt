@@ -18,12 +18,19 @@ set(SUBMODULE_SRC
 set(IMU_SRC
     src/sensors.c)
 
+set(FDIR_SRC
+    src/sensorFdir.c)
+
 # All Warning bitte.
 add_compile_options(-Wall -Wextra -pedantic -g -Og)
 
 add_executable(GncMain ${LIB_SRC} ${SUBMODULE_SRC} ${MAIN_SRC})
 
 add_executable(SensorsOut ${LIB_SRC} ${SUBMODULE_SRC} ${IMU_SRC})
+
+add_executable(FdirHandler ${LIB_SRC} ${SUBMODULE_SRC} ${FDIR_SRC})
+
+set_property(TARGET FdirHandler PROPERTY C_STANDARD 99)
 
 target_include_directories(GncMain PRIVATE
                             ${PROJECT_SOURCE_DIR}/inc
@@ -35,5 +42,11 @@ target_include_directories(SensorsOut PRIVATE
                             ${PROJECT_SOURCE_DIR}/libInc
                             ${PROJECT_SOURCE_DIR}/submodules/npy/)
 
+target_include_directories(FdirHandler PRIVATE 
+                            ${PROJECT_SOURCE_DIR}/inc
+                            ${PROJECT_SOURCE_DIR}/libInc
+                            ${PROJECT_SOURCE_DIR}/submodules/npy/)
+
 target_link_libraries(GncMain PRIVATE Threads::Threads )
 target_link_libraries(SensorsOut PRIVATE Threads::Threads)
+target_link_libraries(FdirHandler PRIVATE Threads::Threads)
