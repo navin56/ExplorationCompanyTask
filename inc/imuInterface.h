@@ -8,8 +8,15 @@ typedef struct
     int    validity;
 } imuData_t;
 
+typedef union
+{
+    imuData_t data;
+    uint8_t   dataBuf[sizeof(imuData_t)];
+} imuData_u;
+
 typedef struct
 {
     unsigned int numImuSensors;
+    double       latency_ms;
     double       samplingRate;
 } imuConfig_t;
