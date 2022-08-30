@@ -18,7 +18,8 @@ Goals:
 1. Scable, Reusable Software Framework
     - Adding Functionality with less interface level changes.
     - Reuse with diffrent hardwares.
-2. 
+2. Capabilities to handle more sensors
+3. Perform FDIR algorithms on sensors.
 
 # Assumptions:
 
@@ -61,6 +62,8 @@ Architecture
     - This limits the interaction between processes to the Interfaces of GNC.
     - This can abstract the serial / sensor interface from the GNC application.
     - The cost of this is the need for inter process communication.
+    - ![Image](docs/Architecture-Page-2.png)
+    - ![Image](docs/Architecture-Page-3.png)
 
 2. IPC
     - Simple UDP unicast was used for IPC.
@@ -84,12 +87,16 @@ Architecture
         - A small lightweight library has been included as a submodule to read the npy binary files.
         - The Re-entry trajectory for which the data has been generated is also provided.
 
+    - Re-Entry Trajectory
+        ![Image](inputData/scenarioAerocapture1Earth.png)
+        ![Image](inputData/scenarioAerocapture2Earth.png)
+
     - Code is compiled with all warnings enabled.
         - Apart from the submodule, there are no warnings.
     - Use of Global variables or variables at file scope.
         - This has been done to save time during development.
         - Ideally, scope of the variables must be reduced.
-    -
+    - The type safety offered by c++ is really usefull.
 
 # Build and Running Instructions
 
