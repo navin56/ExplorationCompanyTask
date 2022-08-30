@@ -4,34 +4,64 @@
 #include "gnc.h"
 #include "threadLib.h"
 #include "interfaceLib.h"
-#include "imuInterface.h"
 
-const char imuMsgIp[]      = "127.0.0.1";
-const uint16_t imuMsgPort  = 60010;
+struct pollfd fds[3];
 
-int gncInit(task_t* taskInfo)
+/* IPC structures. */
+ipcConfig_t imuMsgConf;
+ipcConfig_t gnssMsgConf;
+ipcConfig_t strMsgConf;
+
+imuData_u    imuMsg;
+gnssData_u   gnssMsg;
+strTrkData_u stkMsg;
+
+int gncInit()
 {
     printf("GNC Init... \n");
+    /* Set Socket IP and Ports. */
+    setIpcAddrPort(&imuMsgConf,  (char *) IPCAddr, ImuIpcPort, INPUT);
+    setIpcAddrPort(&gnssMsgConf, (char *) IPCAddr, GnssIpcPort, INPUT);
+    setIpcAddrPort(&strMsgConf,  (char *) IPCAddr, StrIpcPort, INPUT);
+    /* Set socket Directions. */
+    imuMsgConf.direction  = INPUT;
+    gnssMsgConf.direction = INPUT;
+    strMsgConf.direction  = INPUT;
+    /* Init the sockets. */
+    initIPC(&imuMsgConf);
+    initIPC(&gnssMsgConf);
+    initIPC(&strMsgConf);
+    /* Set sockets to the poll struct File descriptor. */
+    fds[0].fd = imuMsgConf.ipcSock;
+    fds[1].fd = gnssMsgConf.ipcSock;
+    fds[2].fd = strMsgConf.ipcSock;
+
+    initPollFd(fds, 3, POLLIN);
     return 0;
 }
 
-void gncStep(task_t* taskInfo)
+/* GNC Actuate. */
+void gncActuate(sensorIn_e sensor, actuatorData_t* actDat)
 {
-    ipcConfig_t imuMsgConf;
-    imuMsgConf.ipAddress = imuMsgIp;
-    imuMsgConf.port      = imuMsgPort;
-    imuMsgConf.direction = INPUT;
-    imuMsgConf.ipcSock   = initIPC(&imuMsgConf);
-
-    while(1)
+    switch (sensor)
     {
-        /* Hey There. */
-        imuData_t imuData;
-        uint8_t   recvBuf[sizeof(imuData)];
-        ssize_t   retval;
+        case IMU:
+            recvMsgIPC(&imuMsgConf, imuMsg.dataBuf, sizeof(imuData_t));
+            printf("Setting Actuators {5} to On \n");
+            break;
 
-        retval = recvMsgIPC(&imuMsgConf, (void* )&imuData, sizeof(recvBuf));
+        case GNSS:
+            recvMsgIPC(&gnssMsgConf, gnssMsg.dataBuf, sizeof(gnssData_t));
+            printf("Setting Actuators {2, 6} to On \n");
+            break;
 
+        case STK:
+            recvMsgIPC(&strMsgConf, stkMsg.dataBuf, sizeof(strTrkData_t));
+            printf("Settings Actuators {1, 2, 3} to On \n");
+            break;
+
+        default:
+            break;
     }
 }
 
@@ -39,11 +69,40 @@ int main()
 {
     task_t      gncTask;
 
-    gncInit(&gncTask);
+    gncInit();
     setTaskPeriod(&gncTask, 10.0);
 
-    pthread_create(&gncTask.taskThread, NULL, &gncStep, &gncTask);
-    pthread_join(gncTask.taskThread, NULL);
+    unsigned int timeOutCtr = 0;
 
+    while (1)
+    {
+        int ret;
+        ret = poll(fds, 3, 1000);
+        /* Positive Retval indicates success. */
+        if (ret > 0)
+        {
+            for (size_t i = 0; i < 3; i++)
+            {
+                /* Find the FD that caused poll to return. */
+                if (fds[i].revents == fds[i].events)
+                {
+                    /* Actuate away. */
+                    gncActuate((sensorIn_e) i, NULL);
+                }
+            }
+        }
+        else if(ret == 0)
+        {
+            /* No data to be read. Or socket timeout. */
+            printf("Poll Timed out. \n");
+            timeOutCtr++;
+        }
+        else
+        {
+            /* Error Handling. */
+            perror("Poll Error. \n");
+        }
+        printf("Timeout: %d \n", timeOutCtr);
+    }
     return 0;
 }
