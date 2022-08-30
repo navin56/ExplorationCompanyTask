@@ -38,8 +38,26 @@ void initGncSendIpc(ipcConfig_t* cfg, unsigned int numIf)
     }
 }
 
-void fdirThread(taskArg_t* args)
-{   ssize_t ret;
+unsigned int fdirSelect(taskArg_t* args, unsigned int numRx)
+{
+    if (numRx == args->numSensors)
+    {
+        /* All Sensors Working, select index 0 */
+        return 0;
+    }
+    else if (numRx < args->numSensors)
+    {
+        /* We have a problem now. */
+        /* Select index less than numSensors. */
+        args->numSensors = numRx;
+        return numRx;
+    }
+}
+
+void* fdirThread(void* argP)
+{
+    taskArg_t* args = (taskArg_t *) argP;
+    ssize_t ret;
     while (1)
     {
         /* Receive IMU Data. */
@@ -49,42 +67,55 @@ void fdirThread(taskArg_t* args)
             {
             case IMU:
                 ret = recvMsgIPC(&args->inputCfg[i], imuMsg[i].dataBuf, sizeof(imuData_t));
-                printf("Received IMU Data : %ld \n", ret);
+                rxImu++;
                 break;
 
             case GNSS:
                 ret = recvMsgIPC(&args->inputCfg[i], gnssMsg[i].dataBuf, sizeof(gnssData_t));
-                printf("Received GNSS Data : %ld \n", ret);
+                rxGnss++;
                 break;
 
             case STK:
                 ret = recvMsgIPC(&args->inputCfg[i], strMsg[i].dataBuf, sizeof(strTrkData_t));
-                printf("Received STK Data : %ld \n", ret);
+                rxStr++;
                 break;
             
             default:
                 break;
             }
         }
+        (void) ret;
         /* Select One sensor and Transmit. Hardcoded for now. */
         switch (args->sensor)
         {
-        case IMU:
-            sendMsgIPC(&args->outputCfg[args->sensor], imuMsg[1].dataBuf, sizeof(imuData_t));
-            break;
-        
-        case GNSS:
-            sendMsgIPC(&args->outputCfg[args->sensor], gnssMsg[1].dataBuf, sizeof(gnssData_t));
-            break;
+            unsigned int index;
+            case IMU:
+                index = fdirSelect(args, rxImu);
+                printf("Rx %d IMU Packets, Selecting IMU %d \n", rxImu, index);
+                sendMsgIPC(&args->outputCfg[args->sensor], imuMsg[index].dataBuf, sizeof(imuData_t));
+                /* Reset the receive counter. */
+                rxImu = 0;
+                break;
 
-        case STK:
-            sendMsgIPC(&args->outputCfg[args->sensor], strMsg[1].dataBuf, sizeof(strTrkData_t));
-            break;
+            case GNSS:
+                index = fdirSelect(args, rxGnss);
+                printf("Rx %d GNSS Packets, Selecting GNSS %d \n", rxGnss, index);
+                sendMsgIPC(&args->outputCfg[args->sensor], gnssMsg[index].dataBuf, sizeof(gnssData_t));
+                rxGnss = 0;
+                break;
 
-        default:
-            break;
+            case STK:
+                index = fdirSelect(args, rxStr);
+                printf("Rx %d STR Packets, Selecting STR %d \n", rxStr, index);
+                sendMsgIPC(&args->outputCfg[args->sensor], strMsg[index].dataBuf, sizeof(strTrkData_t));
+                rxStr = 0;
+                break;
+
+            default:
+                break;
         }
     }
+    return NULL;
 }
 
 int main()

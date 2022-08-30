@@ -88,8 +88,8 @@ Architecture
         - The Re-entry trajectory for which the data has been generated is also provided.
 
     - Re-Entry Trajectory
-        ![Image](inputData/scenarioAerocapture1Earth.png)
-        ![Image](inputData/scenarioAerocapture2Earth.png)
+        - ![Image](inputData/scenarioAerocapture1Earth.png)
+        - ![Image](inputData/scenarioAerocapture2Earth.png)
 
     - Code is compiled with all warnings enabled.
         - Apart from the submodule, there are no warnings.
